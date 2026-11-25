@@ -92,7 +92,6 @@ static bool parseArgs(int argc, char** argv, Options& o)
     return o.frames > 0 && o.warmup >= 0;
 }
 
-/* Filter configuration */
 static KFParams makeParams()
 {
     KFParams p{};
@@ -107,10 +106,7 @@ static KFParams makeParams()
     return p;
 }
 
-/*
- * Deterministic synthetic measurements.
- * Measurement generation is outside the timed filter region.
- */
+
 static void makeMeasurement(
     int objectId,
     int frame,
@@ -150,7 +146,6 @@ static void fillMeasurements(
     }
 }
 
-/* Initialize one object's state and covariance. */
 static void initializeTrack(
     Track& track,
     const Meas& measurement)
@@ -167,7 +162,6 @@ static void initializeTrack(
         track.P[i * NS + i] = KF_P0;
 }
 
-/* Prevent the compiler from making the final results irrelevant. */
 static double calculateChecksum(
     const std::vector<Track>& tracks)
 {
@@ -185,10 +179,7 @@ static double calculateChecksum(
     return sum;
 }
 
-/*
- * Sequential execution:
- * Every object is updated by the same CPU thread.
- */
+
 static void updateAllSequential(
     std::vector<Track>& tracks,
     const std::vector<Meas>& measurements,
@@ -265,7 +256,6 @@ int main(int argc, char** argv)
             );
         }
 
-        /* Warm-up: excluded from timing. */
         for (int f = 1; f <= options.warmup; ++f) {
 
             fillMeasurements(f, measurements);
@@ -280,7 +270,6 @@ int main(int argc, char** argv)
         std::vector<double> times;
         times.reserve(options.frames);
 
-        /* Actual benchmark. */
         for (int f = 1; f <= options.frames; ++f) {
 
             fillMeasurements(f, measurements);
