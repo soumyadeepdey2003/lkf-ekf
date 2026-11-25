@@ -13,7 +13,6 @@ bool generateMeasurements(
     const std::string& annotated_video_path
 )
 {
-    // 1. Open the input video
     cv::VideoCapture video(video_path);
 
     if (!video.isOpened())
@@ -22,7 +21,6 @@ bool generateMeasurements(
         return false;
     }
 
-    // 2. Obtain video properties
     double fps = video.get(cv::CAP_PROP_FPS);
 
     if (fps <= 0.0)
@@ -36,7 +34,6 @@ bool generateMeasurements(
     int frame_height =
         static_cast<int>(video.get(cv::CAP_PROP_FRAME_HEIGHT));
 
-    // 3. Open CSV output
     std::ofstream csv(csv_path);
 
     if (!csv.is_open())
@@ -48,15 +45,13 @@ bool generateMeasurements(
     csv << "frame,timestamp,x,y,width,height,"
            "velocity_x,velocity_y\n";
 
-    // 4. Configure background subtraction
     cv::Ptr<cv::BackgroundSubtractor> background_subtractor =
         cv::createBackgroundSubtractorMOG2(
-            500,       // History
-            16,        // Variance threshold
-            false      // Do not detect shadows
+            500,       
+            16,       
+            false      
         );
 
-    // 5. Configure output video
     cv::VideoWriter output_video;
 
     if (!annotated_video_path.empty())
@@ -87,7 +82,6 @@ bool generateMeasurements(
 
     std::cout << "Starting video processing...\n";
 
-    // 6. Process every frame
     while (video.read(frame))
     {
         frame_number++;
@@ -95,13 +89,11 @@ bool generateMeasurements(
         double timestamp =
             static_cast<double>(frame_number - 1) / fps;
 
-        // Apply background subtraction
         background_subtractor->apply(
             frame,
             foreground_mask
         );
 
-        // Remove small noise
         cv::Mat kernel = cv::getStructuringElement(
             cv::MORPH_ELLIPSE,
             cv::Size(5, 5)
@@ -121,7 +113,6 @@ bool generateMeasurements(
             kernel
         );
 
-        // Find foreground contours
         std::vector<std::vector<cv::Point>> contours;
 
         cv::findContours(
@@ -134,7 +125,6 @@ bool generateMeasurements(
         double largest_area = 0.0;
         int best_contour_index = -1;
 
-        // 7. Select the largest valid moving object
         for (int i = 0; i < static_cast<int>(contours.size()); i++)
         {
             double area = cv::contourArea(contours[i]);
@@ -152,11 +142,9 @@ bool generateMeasurements(
         {
             current_detection = true;
 
-            // Calculate bounding rectangle
             cv::Rect bounding_box =
                 cv::boundingRect(contours[best_contour_index]);
 
-            // Calculate centroid using image moments
             cv::Moments moments =
                 cv::moments(contours[best_contour_index]);
 
@@ -168,7 +156,6 @@ bool generateMeasurements(
                 double velocity_x = 0.0;
                 double velocity_y = 0.0;
 
-                // 8. Calculate image-plane velocity
                 if (previous_detection)
                 {
                     double dt = 1.0 / fps;
@@ -177,7 +164,6 @@ bool generateMeasurements(
                     velocity_y = (y - previous_y) / dt;
                 }
 
-                // 9. Write measurement to CSV
                 csv << frame_number << ","
                     << timestamp << ","
                     << x << ","
@@ -187,7 +173,6 @@ bool generateMeasurements(
                     << velocity_x << ","
                     << velocity_y << "\n";
 
-                // Draw bounding rectangle
                 cv::rectangle(
                     frame,
                     bounding_box,
@@ -195,7 +180,6 @@ bool generateMeasurements(
                     2
                 );
 
-                // Draw centroid
                 cv::circle(
                     frame,
                     cv::Point(
@@ -226,7 +210,6 @@ bool generateMeasurements(
             }
         }
 
-        // Do not calculate velocity across missing detections
         if (!current_detection)
         {
             previous_detection = false;
@@ -236,7 +219,6 @@ bool generateMeasurements(
             previous_detection = true;
         }
 
-        // Save annotated frame
         if (output_video.isOpened())
         {
             output_video.write(frame);
@@ -250,7 +232,6 @@ bool generateMeasurements(
         }
     }
 
-    // 10. Release resources
     video.release();
     output_video.release();
     csv.close();
