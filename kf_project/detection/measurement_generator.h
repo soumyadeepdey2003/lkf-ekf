@@ -20,13 +20,6 @@ struct Measurement
     double velocity_y;
 };
 
-// Process an offline video and generate measurements.
-//
-// video_path: input video
-// csv_path: output measurement file
-// annotated_video_path: output video with detected object
-//
-// Returns true if processing succeeds.
 
 bool generateMeasurements(
     const std::string& video_path,
