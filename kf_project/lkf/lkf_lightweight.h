@@ -8,19 +8,11 @@
 namespace kf
 {
 
-// ============================================================
-// 1. DIMENSIONS AND CONFIGURATION
-// ============================================================
 
 constexpr int STATE_DIM = 6;
 constexpr int MEAS_DIM = 3;
 constexpr double DEFAULT_TOLERANCE = 1.0e-12;
 
-// ============================================================
-// 2. DATA STRUCTURES
-// ============================================================
-
-// State = [x, y, z, vx, vy, vz]
 
 struct State
 {
@@ -28,14 +20,7 @@ struct State
     double vx{}, vy{}, vz{};
 };
 
-// Covariance block representation:
-//
-// P = | A    C   |
-//     | C^T  D   |
-//
-// A: position covariance (3x3)
-// C: position-velocity covariance (3x3)
-// D: velocity covariance (3x3)
+
 
 struct Covariance
 {
@@ -73,9 +58,7 @@ struct LKFResult
     bool success = false;
 };
 
-// ============================================================
-// 3. BASIC VALIDATION FUNCTIONS
-// ============================================================
+
 
 namespace detail
 {
@@ -185,19 +168,7 @@ inline bool isTriangular(
     return false;
 }
 
-// ============================================================
-// 4. SPECIALIZED LINEAR SYSTEM SOLVERS
-// ============================================================
 
-// Solve:
-//
-// S * X = B
-//
-// S: 3x3
-// B: 3x6
-// X: 3x6
-//
-// We solve directly instead of explicitly calculating S inverse.
 
 inline bool solveDiagonal(
     const double S[3][3],
@@ -261,7 +232,7 @@ inline bool solveTriangular(
     return true;
 }
 
-// Cholesky decomposition: S = L * L^T
+
 
 inline bool cholesky(
     const double S[3][3],
@@ -293,19 +264,16 @@ inline bool cholesky(
     return true;
 }
 
-// Solve L * L^T * X = B.
 
 inline bool solveCholesky(
     const double L[3][3],
     double B[3][6],
     double tolerance)
 {
-    // Forward substitution: L * Y = B
 
     if (!solveTriangular(L, B, true, tolerance))
         return false;
 
-    // Backward substitution: L^T * X = Y
 
     for (int col = 0; col < 6; ++col)
     {
@@ -326,7 +294,6 @@ inline bool solveCholesky(
     return true;
 }
 
-// Gauss-Jordan with partial pivoting.
 
 inline bool solveGaussJordan(
     double S[3][3],
@@ -393,9 +360,7 @@ inline bool solveGaussJordan(
     return true;
 }
 
-// ============================================================
-// 5. ADAPTIVE SOLVER SELECTION
-// ============================================================
+
 
 inline bool calculateGain(
     const double A[3][3],
@@ -414,13 +379,6 @@ inline bool calculateGain(
         for (int j = 0; j < 3; ++j)
             S[i][j] = innovationS[i][j];
 
-    // P * H^T = [ A ; C^T ]
-    //
-    // Therefore:
-    //
-    // B = (P * H^T)^T = [ A^T  C ]
-    //
-    // A is symmetric, so A^T = A.
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
@@ -431,7 +389,6 @@ inline bool calculateGain(
 
     bool solved = false;
 
-    // Case 1: Identity matrix.
 
     if (isIdentity(S, tolerance))
     {
@@ -439,7 +396,6 @@ inline bool calculateGain(
         solved = true;
     }
 
-    // Case 2: Diagonal matrix.
 
     else if (isDiagonal(S, tolerance))
     {
@@ -448,7 +404,6 @@ inline bool calculateGain(
         solved = solveDiagonal(S, B, tolerance);
     }
 
-    // Case 3: Triangular matrix.
 
     if (!solved)
     {
@@ -463,7 +418,6 @@ inline bool calculateGain(
         }
     }
 
-    // Case 4: Symmetric positive-definite matrix.
 
     if (!solved)
     {
@@ -478,7 +432,6 @@ inline bool calculateGain(
         }
     }
 
-    // Case 5: General matrix fallback.
 
     if (!solved)
     {
@@ -494,7 +447,6 @@ inline bool calculateGain(
         return false;
     }
 
-    // Transpose the solved result to obtain K.
 
     for (int i = 0; i < 6; ++i)
         for (int j = 0; j < 3; ++j)
@@ -503,11 +455,7 @@ inline bool calculateGain(
     return true;
 }
 
-} // namespace detail
-
-// ============================================================
-// 6. MAIN LIGHTWEIGHT LKF FUNCTION
-// ============================================================
+} 
 
 inline bool updateLKF(
     const State& previousState,
@@ -519,9 +467,7 @@ inline bool updateLKF(
     LKFResult& result,
     double tolerance = DEFAULT_TOLERANCE)
 {
-    // --------------------------------------------------------
-    // STEP 1: VALIDATE INPUTS
-    // --------------------------------------------------------
+   
 
     result = LKFResult{};
 
@@ -566,9 +512,6 @@ inline bool updateLKF(
             measurementNoise.R, tolerance))
         return false;
 
-    // --------------------------------------------------------
-    // STEP 2: STATE PREDICTION
-    // --------------------------------------------------------
 
     State predictedState{};
 
@@ -585,9 +528,7 @@ inline bool updateLKF(
     predictedState.vy = previousState.vy;
     predictedState.vz = previousState.vz;
 
-    // --------------------------------------------------------
-    // STEP 3: PROCESS NOISE CALCULATION
-    // --------------------------------------------------------
+    
 
     const double dt2 = deltaTime * deltaTime;
     const double dt3 = dt2 * deltaTime;
@@ -599,13 +540,10 @@ inline bool updateLKF(
     const double qpv = q * dt3 / 2.0;
     const double qvv = q * dt2;
 
-    // --------------------------------------------------------
-    // STEP 4: COVARIANCE PREDICTION
-    // --------------------------------------------------------
+    
 
     Covariance predictedCovariance{};
 
-    // Position covariance A'.
 
     for (int i = 0; i < 3; ++i)
         for (int j = i; j < 3; ++j)
@@ -625,7 +563,6 @@ inline bool updateLKF(
             predictedCovariance.A[j][i] = value;
         }
 
-    // Position-velocity covariance C'.
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
@@ -638,7 +575,6 @@ inline bool updateLKF(
                 predictedCovariance.C[i][j] += qpv;
         }
 
-    // Velocity covariance D'.
 
     for (int i = 0; i < 3; ++i)
         for (int j = i; j < 3; ++j)
@@ -652,10 +588,6 @@ inline bool updateLKF(
             predictedCovariance.D[j][i] = value;
         }
 
-    // --------------------------------------------------------
-    // STEP 5: INNOVATION
-    // --------------------------------------------------------
-
     const double innovation[3] =
     {
         measurement.x - predictedState.x,
@@ -663,10 +595,7 @@ inline bool updateLKF(
         measurement.z - predictedState.z
     };
 
-    // --------------------------------------------------------
-    // STEP 6: INNOVATION COVARIANCE
-    // --------------------------------------------------------
-
+    
     double S[3][3]{};
 
     for (int i = 0; i < 3; ++i)
@@ -683,9 +612,7 @@ inline bool updateLKF(
     if (!detail::validMatrix3(S))
         return false;
 
-    // --------------------------------------------------------
-    // STEP 7: KALMAN GAIN
-    // --------------------------------------------------------
+   
 
     double K[6][3]{};
 
@@ -700,10 +627,7 @@ inline bool updateLKF(
             tolerance))
         return false;
 
-    // --------------------------------------------------------
-    // STEP 8: STATE CORRECTION
-    // --------------------------------------------------------
-
+    
     double predicted[6] =
     {
         predictedState.x,
@@ -732,20 +656,10 @@ inline bool updateLKF(
         corrected[3], corrected[4], corrected[5]
     };
 
-    // --------------------------------------------------------
-    // STEP 9: JOSEPH-FORM COVARIANCE CORRECTION
-    // --------------------------------------------------------
-
-    // P_corrected =
-    //
-    // (I - K*H) * P_predicted * (I - K*H)^T
-    //                 + K * R * K^T
-    //
-    // Use fixed-size arrays and reusable intermediate matrices.
+    
 
     double P[6][6]{};
 
-    // Reconstruct full 6x6 covariance.
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
@@ -759,12 +673,7 @@ inline bool updateLKF(
             P[i + 3][j + 3] = predictedCovariance.D[i][j];
         }
 
-    // Construct F = I - K*H.
-    //
-    // H = [ I  0 ]
-    //
-    // Therefore only the first three columns of K
-    // contribute to K*H.
+   
 
     double F[6][6]{};
 
@@ -774,7 +683,6 @@ inline bool updateLKF(
                 (i == j ? 1.0 : 0.0) -
                 (j < 3 ? K[i][j] : 0.0);
 
-    // Intermediate = F * P.
 
     double intermediate[6][6]{};
 
@@ -784,7 +692,6 @@ inline bool updateLKF(
                 intermediate[i][j] +=
                     F[i][m] * P[m][j];
 
-    // Corrected P = intermediate * F^T + K*R*K^T.
 
     double correctedP[6][6]{};
 
@@ -810,10 +717,7 @@ inline bool updateLKF(
             correctedP[j][i] = value;
         }
 
-    // --------------------------------------------------------
-    // STEP 10: EXTRACT COVARIANCE BLOCKS
-    // --------------------------------------------------------
-
+   
     Covariance correctedCovariance{};
 
     for (int i = 0; i < 3; ++i)
@@ -829,10 +733,7 @@ inline bool updateLKF(
                 correctedP[i + 3][j + 3];
         }
 
-    // --------------------------------------------------------
-    // STEP 11: FINAL RESULT VALIDATION
-    // --------------------------------------------------------
-
+    
     for (double value : corrected)
         if (!detail::finite(value))
             return false;
@@ -842,9 +743,7 @@ inline bool updateLKF(
         !detail::validMatrix3(correctedCovariance.D))
         return false;
 
-    // --------------------------------------------------------
-    // STEP 12: STORE RESULTS
-    // --------------------------------------------------------
+    
 
     result.state = correctedState;
     result.covariance = correctedCovariance;
@@ -859,6 +758,6 @@ inline bool updateLKF(
     return true;
 }
 
-} // namespace kf
+} 
 
 #endif
