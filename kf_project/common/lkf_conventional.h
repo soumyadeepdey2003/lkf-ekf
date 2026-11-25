@@ -9,9 +9,7 @@ static constexpr int NS = 6;
 static constexpr int NZ = 3;
 static constexpr double KF_P0 = 1.0;
 
-// ------------------------------------------------------------
-// Track state and covariance
-// ------------------------------------------------------------
+
 
 struct Track
 {
@@ -19,9 +17,7 @@ struct Track
     double P[NS * NS] = {};
 };
 
-// ------------------------------------------------------------
-// Position measurement
-// ------------------------------------------------------------
+
 
 struct Meas
 {
@@ -29,16 +25,13 @@ struct Meas
     double z[NZ] = {};
 };
 
-// ------------------------------------------------------------
-// Conventional LKF parameters
-// ------------------------------------------------------------
+
 
 struct KFParams
 {
     double dt = 0.1;
     double sa2 = 1.0;
 
-    // Measurement noise covariance (3 x 3)
     double R[9] = {
         1.0, 0.0, 0.0,
         0.0, 1.0, 0.0,
@@ -46,9 +39,7 @@ struct KFParams
     };
 };
 
-// ------------------------------------------------------------
-// Invert a 3 x 3 matrix using the adjugate method
-// ------------------------------------------------------------
+
 
 inline bool lkf_inverse3(const double A[9], double invA[9])
 {
@@ -81,9 +72,7 @@ inline bool lkf_inverse3(const double A[9], double invA[9])
     return true;
 }
 
-// ------------------------------------------------------------
-// Conventional Linear Kalman Filter: one complete time step
-// ------------------------------------------------------------
+
 
 inline bool lkf_conv_step(
     Track* track,
@@ -98,11 +87,7 @@ inline bool lkf_conv_step(
     const double dt3 = dt2 * dt;
     const double dt4 = dt2 * dt2;
 
-    // ========================================================
-    // STEP 1: State prediction
-    //
-    // x(k|k-1) = F * x(k-1|k-1)
-    // ========================================================
+  
 
     double xp[NS];
 
@@ -114,16 +99,11 @@ inline bool lkf_conv_step(
         xp[axis + 3] = track->x[axis + 3];
     }
 
-    // ========================================================
-    // STEP 2: Covariance prediction
-    //
-    // P(k|k-1) = F * P * F^T + Q
-    // ========================================================
+  
 
     double FP[NS * NS] = {};
     double Pp[NS * NS] = {};
 
-    // FP = F * P
     for (int r = 0; r < NS; ++r)
     {
         for (int c = 0; c < NS; ++c)
@@ -136,7 +116,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // Pp = FP * F^T
     for (int r = 0; r < NS; ++r)
     {
         for (int c = 0; c < NS; ++c)
@@ -149,7 +128,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // White-acceleration process noise covariance
     const double q00 = params->sa2 * dt4 / 4.0;
     const double q01 = params->sa2 * dt3 / 2.0;
     const double q11 = params->sa2 * dt2;
@@ -165,7 +143,6 @@ inline bool lkf_conv_step(
         Pp[v * NS + v] += q11;
     }
 
-    // If there is no valid measurement, retain prediction.
     if (!measurement->valid)
     {
         for (int i = 0; i < NS; ++i)
@@ -177,11 +154,7 @@ inline bool lkf_conv_step(
         return true;
     }
 
-    // ========================================================
-    // STEP 3: Measurement innovation
-    //
-    // y = z - H * xp
-    // ========================================================
+   
 
     double innovation[NZ];
 
@@ -190,11 +163,7 @@ inline bool lkf_conv_step(
         innovation[i] = measurement->z[i] - xp[i];
     }
 
-    // ========================================================
-    // STEP 4: Innovation covariance
-    //
-    // S = H * Pp * H^T + R
-    // ========================================================
+    
 
     double S[9];
 
@@ -207,20 +176,14 @@ inline bool lkf_conv_step(
         }
     }
 
-    // ========================================================
-    // STEP 5: Invert innovation covariance
-    // ========================================================
+   
 
     double Sinv[9];
 
     if (!lkf_inverse3(S, Sinv))
         return false;
 
-    // ========================================================
-    // STEP 6: Kalman gain
-    //
-    // K = Pp * H^T * inverse(S)
-    // ========================================================
+   
 
     double K[NS * NZ] = {};
 
@@ -236,11 +199,7 @@ inline bool lkf_conv_step(
         }
     }
 
-    // ========================================================
-    // STEP 7: State correction
-    //
-    // x(k|k) = xp + K * innovation
-    // ========================================================
+   
 
     double corrected_x[NS];
 
@@ -255,18 +214,13 @@ inline bool lkf_conv_step(
         }
     }
 
-    // ========================================================
-    // STEP 8: Joseph-form covariance correction
-    //
-    // P = (I-KH)Pp(I-KH)^T + KRK^T
-    // ========================================================
+  
 
     double A[NS * NS] = {};
     double AP[NS * NS] = {};
     double newP[NS * NS] = {};
 
-    // A = I - K*H
-    // H selects the first three state variables.
+    
     for (int r = 0; r < NS; ++r)
     {
         for (int c = 0; c < NS; ++c)
@@ -278,7 +232,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // AP = A * Pp
     for (int r = 0; r < NS; ++r)
     {
         for (int c = 0; c < NS; ++c)
@@ -291,7 +244,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // First term: AP * A^T
     for (int r = 0; r < NS; ++r)
     {
         for (int c = 0; c < NS; ++c)
@@ -304,7 +256,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // Second term: K * R * K^T
     double KR[NS * NZ] = {};
 
     for (int r = 0; r < NS; ++r)
@@ -331,7 +282,6 @@ inline bool lkf_conv_step(
         }
     }
 
-    // Remove small numerical asymmetry.
     for (int r = 0; r < NS; ++r)
     {
         for (int c = r + 1; c < NS; ++c)
@@ -344,9 +294,7 @@ inline bool lkf_conv_step(
         }
     }
 
-    // ========================================================
-    // STEP 9: Store corrected state and covariance
-    // ========================================================
+   
 
     for (int i = 0; i < NS; ++i)
         track->x[i] = corrected_x[i];
@@ -357,4 +305,4 @@ inline bool lkf_conv_step(
     return true;
 }
 
-#endif // LKF_CONVENTIONAL_H
+#endif 
