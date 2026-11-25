@@ -6,9 +6,6 @@
 
 #include "../common/lkf_conventional.h"
 
-// ============================================================
-// GPU DEVICE FUNCTION: Inverse of a 3 x 3 matrix
-// ============================================================
 
 __device__ bool gpu_inverse3(
     const double A[9],
@@ -44,11 +41,7 @@ __device__ bool gpu_inverse3(
 }
 
 
-// ============================================================
-// GPU KERNEL: Conventional Linear Kalman Filter
-//
-// One CUDA thread processes one independent tracking object.
-// ============================================================
+
 
 __global__ void lkf_original_gpu_kernel(
     Track* tracks,
@@ -71,10 +64,7 @@ __global__ void lkf_original_gpu_kernel(
     const double dt3 = dt2 * dt;
     const double dt4 = dt2 * dt2;
 
-    // ========================================================
-    // STEP 1: STATE PREDICTION
-    // xp = F * x
-    // ========================================================
+   
 
     double xp[NS];
 
@@ -89,15 +79,11 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 2: COVARIANCE PREDICTION
-    // Pp = F * P * F^T + Q
-    // ========================================================
+    
 
     double FP[NS * NS] = {};
     double Pp[NS * NS] = {};
 
-    // FP = F * P
 
     for (int r = 0; r < NS; ++r)
     {
@@ -114,7 +100,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // Pp = FP * F^T
 
     for (int r = 0; r < NS; ++r)
     {
@@ -131,7 +116,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // White acceleration process noise
 
     const double q00 =
         params.sa2 * dt4 / 4.0;
@@ -154,9 +138,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 3: HANDLE INVALID MEASUREMENT
-    // ========================================================
+   
 
     if (!measurement.valid)
     {
@@ -173,10 +155,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 4: MEASUREMENT INNOVATION
-    // innovation = z - H * xp
-    // ========================================================
+   
 
     double innovation[NZ];
 
@@ -187,11 +166,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 5: INNOVATION COVARIANCE
-    // S = H * Pp * H^T + R
-    // ========================================================
-
+  
     double S[9];
 
     for (int r = 0; r < NZ; ++r)
@@ -205,9 +180,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 6: INVERT INNOVATION COVARIANCE
-    // ========================================================
+   
 
     double Sinv[9];
 
@@ -218,11 +191,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 7: KALMAN GAIN
-    // K = Pp * H^T * inverse(S)
-    // ========================================================
-
+  
     double K[NS * NZ] = {};
 
     for (int r = 0; r < NS; ++r)
@@ -239,10 +208,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 8: STATE CORRECTION
-    // x = xp + K * innovation
-    // ========================================================
+ 
 
     double corrected_x[NS];
 
@@ -259,16 +225,12 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 9: JOSEPH-FORM COVARIANCE CORRECTION
-    // P = (I-KH)Pp(I-KH)^T + KRK^T
-    // ========================================================
+  
 
     double A[NS * NS] = {};
     double AP[NS * NS] = {};
     double newP[NS * NS] = {};
 
-    // A = I - K*H
 
     for (int r = 0; r < NS; ++r)
     {
@@ -285,7 +247,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // AP = A * Pp
 
     for (int r = 0; r < NS; ++r)
     {
@@ -300,7 +261,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // First term: AP * A^T
 
     for (int r = 0; r < NS; ++r)
     {
@@ -315,7 +275,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // Second term: K * R
 
     double KR[NS * NZ] = {};
 
@@ -332,7 +291,6 @@ __global__ void lkf_original_gpu_kernel(
         }
     }
 
-    // Add KR * K^T
 
     for (int r = 0; r < NS; ++r)
     {
@@ -348,10 +306,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 10: REMOVE NUMERICAL ASYMMETRY
-    // ========================================================
-
+    
     for (int r = 0; r < NS; ++r)
     {
         for (int c = r + 1; c < NS; ++c)
@@ -368,9 +323,7 @@ __global__ void lkf_original_gpu_kernel(
     }
 
 
-    // ========================================================
-    // STEP 11: STORE CORRECTED STATE AND COVARIANCE
-    // ========================================================
+   
 
     for (int i = 0; i < NS; ++i)
         track.x[i] = corrected_x[i];
@@ -383,11 +336,7 @@ __global__ void lkf_original_gpu_kernel(
 }
 
 
-// ============================================================
-// HOST FUNCTION: GPU-ONLY EXECUTION
-//
-// Uses a cleanup lambda instead of goto.
-// ============================================================
+
 
 bool lkf_original_gpu_step(
     Track* tracks,
@@ -406,9 +355,7 @@ bool lkf_original_gpu_step(
     int* d_status = nullptr;
     int* h_status = nullptr;
 
-    // --------------------------------------------------------
-    // MEMORY SIZES
-    // --------------------------------------------------------
+   
 
     const size_t track_bytes =
         sizeof(Track) * static_cast<size_t>(number_of_tracks);
@@ -419,9 +366,7 @@ bool lkf_original_gpu_step(
     const size_t status_bytes =
         sizeof(int) * static_cast<size_t>(number_of_tracks);
 
-    // --------------------------------------------------------
-    // RESOURCE CLEANUP
-    // --------------------------------------------------------
+   
 
     auto cleanup = [&]()
     {
@@ -450,9 +395,7 @@ bool lkf_original_gpu_step(
         }
     };
 
-    // --------------------------------------------------------
-    // STEP 1: ALLOCATE GPU MEMORY
-    // --------------------------------------------------------
+   
 
     cudaError_t error;
 
@@ -498,9 +441,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 2: ALLOCATE CPU STATUS MEMORY
-    // --------------------------------------------------------
+   
 
     h_status = new (std::nothrow) int[number_of_tracks];
 
@@ -513,9 +454,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 3: CPU TO GPU DATA TRANSFER
-    // --------------------------------------------------------
+   
 
     error = cudaMemcpy(
         d_tracks,
@@ -549,9 +488,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 4: CONFIGURE CUDA EXECUTION
-    // --------------------------------------------------------
+    
 
     const int threads_per_block = 128;
 
@@ -559,13 +496,9 @@ bool lkf_original_gpu_step(
         (number_of_tracks + threads_per_block - 1)
         / threads_per_block;
 
-    // Clear any previous CUDA runtime error.
     cudaGetLastError();
 
-    // --------------------------------------------------------
-    // STEP 5: LAUNCH GPU KERNEL
-    // --------------------------------------------------------
-
+   
     lkf_original_gpu_kernel<<<blocks, threads_per_block>>>(
         d_tracks,
         d_measurements,
@@ -573,7 +506,6 @@ bool lkf_original_gpu_step(
         number_of_tracks,
         d_status);
 
-    // Check immediate kernel launch errors.
 
     error = cudaGetLastError();
 
@@ -587,9 +519,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 6: WAIT FOR GPU EXECUTION
-    // --------------------------------------------------------
+   
 
     error = cudaDeviceSynchronize();
 
@@ -603,9 +533,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 7: GPU TO CPU DATA TRANSFER
-    // --------------------------------------------------------
+   
 
     error = cudaMemcpy(
         tracks,
@@ -639,10 +567,7 @@ bool lkf_original_gpu_step(
         return false;
     }
 
-    // --------------------------------------------------------
-    // STEP 8: VERIFY ALL TRACKING OBJECTS
-    // --------------------------------------------------------
-
+ 
     for (int i = 0; i < number_of_tracks; ++i)
     {
         if (h_status[i] != 1)
@@ -656,9 +581,7 @@ bool lkf_original_gpu_step(
         }
     }
 
-    // --------------------------------------------------------
-    // STEP 9: RELEASE RESOURCES
-    // --------------------------------------------------------
+  
 
     cleanup();
 
