@@ -192,13 +192,7 @@ static double calculateChecksum(
     return sum;
 }
 
-/*
- * Parallel execution:
- * Each OpenMP iteration processes a different object.
- *
- * There is no dependency between different objects.
- * The frame sequence itself remains sequential.
- */
+
 static void updateAllParallel(
     std::vector<Track>& tracks,
     const std::vector<Meas>& measurements,
@@ -295,7 +289,6 @@ int main(int argc, char** argv)
             );
         }
 
-        /* Warm-up: excluded from timing. */
         for (int f = 1; f <= options.warmup; ++f) {
 
             fillMeasurements(f, measurements);
@@ -310,7 +303,6 @@ int main(int argc, char** argv)
         std::vector<double> times;
         times.reserve(options.frames);
 
-        /* Actual benchmark. */
         for (int f = 1; f <= options.frames; ++f) {
 
             fillMeasurements(f, measurements);
