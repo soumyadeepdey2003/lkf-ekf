@@ -1,0 +1,10 @@
+{
+    "cmake.sourceDirectory": "E:/kf_project/kf_project",
+    "clangd.arguments": [
+        "--compile-commands-dir=E:/kf_project/kf_project/build_cmake"
+    ],
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\kf_project_backup_before_restart\\build_cmake\\compile_commands.json"
+
+}
+
+    

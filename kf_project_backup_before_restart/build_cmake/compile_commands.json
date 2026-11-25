@@ -1,0 +1,14 @@
+[
+{
+  "directory": "E:/kf_project/kf_project/build_cmake",
+  "command": "C:\\MinGW\\bin\\g++.exe -IE:/kf_project/kf_project/detection -isystem E:/KF_Research/third_party/opencv_install/include -std=c++14 -o CMakeFiles\\measurement_generator.dir\\detection\\measurement_generator.cpp.obj -c E:\\kf_project\\kf_project\\detection\\measurement_generator.cpp",
+  "file": "E:\\kf_project\\kf_project\\detection\\measurement_generator.cpp",
+  "output": "CMakeFiles\\measurement_generator.dir\\detection\\measurement_generator.cpp.obj"
+},
+{
+  "directory": "E:/kf_project/kf_project/build_cmake",
+  "command": "C:\\MinGW\\bin\\g++.exe -IE:/kf_project/kf_project/detection -isystem E:/KF_Research/third_party/opencv_install/include -std=c++14 -o CMakeFiles\\measurement_generator_cpu.dir\\detection\\main.cpp.obj -c E:\\kf_project\\kf_project\\detection\\main.cpp",
+  "file": "E:\\kf_project\\kf_project\\detection\\main.cpp",
+  "output": "CMakeFiles\\measurement_generator_cpu.dir\\detection\\main.cpp.obj"
+}
+]

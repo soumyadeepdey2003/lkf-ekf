@@ -1,0 +1,5 @@
+# ninja log v5
+5339	5974	8170608359219685	bin/measurement_generator_cpu.exe	fc48edd7fc12a01e
+4765	5339	8170608353132528	libmeasurement_generator.a	6a51b4438c977b18
+77	4763	8170608347389479	CMakeFiles/measurement_generator.dir/detection/measurement_generator.cpp.obj	ddd7e67335efd1e6
+89	2715	8170608326837218	CMakeFiles/measurement_generator_cpu.dir/detection/main.cpp.obj	8bde737c14ba2bb3
